@@ -1,45 +1,77 @@
-# MNIST Rotated Digit Angle Prediction
+# MNIST Rotation Angle Regression (MATLAB Version)
 
-This project trains a CNN to predict the rotation angle of a rotated MNIST digit.
+This project re-implements the MATLAB official example of a CNN regression model in PyTorch to predict the rotation angle of MNIST digit images.
 
-## Data Preprocessing
+## Project Structure
 
-The data preprocessing steps are as follows:
+- `train_matlab.ipynb`: Main training notebook  
+- `DigitsDataTrain.mat`: MATLAB-format training data  
+- `DigitsDataTest.mat`: MATLAB-format test data  
+- `best_model.pt`: Saved best model checkpoint (see **Model Checkpoint** below)  
 
-1.  **Load MNIST Data:** The original MNIST training and testing datasets are loaded.
-2.  **Create Subsets:** 5,000 random samples are selected from both the training and testing sets.
-3.  **Rotate Digits:** A custom `RotatedDigits` dataset is created. This dataset rotates each digit by a random angle between -45 and 45 degrees.
-4.  **Save Images:** The rotated digit images are saved to the `./use_data/train` and `./use_data/test` directories. The filename of each image contains the rotation angle.
+## Dataset
 
-To run the data preprocessing, execute the first cell in the `new_test.ipynb` notebook.
+We use MATLAB `.mat` files for the MNIST rotation dataset:  
+- **Training set**: `DigitsDataTrain.mat`  
+- **Test set**: `DigitsDataTest.mat`  
+- **Validation set**: 15% split from the training set  
 
 ## Model Architecture
 
-The model is a Convolutional Neural Network (CNN) with the following layers:
+The `EnhancedCNNRegressor` CNN model:
 
-1.  `nn.Conv2d(1, 8, 3, padding=1)`
-2.  `nn.BatchNorm2d(8)`
-3.  `nn.ReLU()`
-4.  `nn.MaxPool2d(2,2)`
-5.  `nn.Conv2d(8, 16, 3, padding=1)`
-6.  `nn.BatchNorm2d(16)`
-7.  `nn.ReLU()`
-8.  `nn.MaxPool2d(2,2)`
-9.  `nn.Conv2d(16, 32, 3, padding=1)`
-10. `nn.BatchNorm2d(32)`
-11. `nn.ReLU()`
-12. `nn.Conv2d(32, 32, 3, padding=1)`
-13. `nn.BatchNorm2d(32)`
-14. `nn.ReLU()`
-15. `nn.Flatten()`
-16. `nn.Linear(32 * 7 * 7, 1)`
+```text
+Input: 1×28×28 grayscale image
+│
+├─ Conv2d(1→8,   3×3, pad=1) → BatchNorm → ReLU → MaxPool2d(2×2)
+├─ Conv2d(8→16,  3×3, pad=1) → BatchNorm → ReLU → MaxPool2d(2×2)
+├─ Conv2d(16→32, 3×3, pad=1) → BatchNorm → ReLU
+├─ Conv2d(32→32, 3×3, pad=1) → BatchNorm → ReLU
+├─ Flatten
+└─ Linear(32×7×7 → 1) → Output rotation angle
+```
 
-The number of nodes from the last convolutional layer to the MLP layer is `32 * 7 * 7 = 1568`.
+## Training Parameters
 
-## Training
+- **Batch size**: 128  
+- **Optimizer**: SGD (lr=1e-3, momentum=0.9)  
+- **LR scheduler**: StepLR (step_size=20, γ=0.1)  
+- **Epochs**: 100  
+- **Loss**: Mean Squared Error (MSE)  
+- **Metric**: Root Mean Squared Error (RMSE)  
 
-To train the model, execute the second cell in the `new_test.ipynb` notebook. The model is trained for 100 epochs using the Mean Squared Error (MSE) loss function and the SGD optimizer. The best model is saved to `best_model.pt`.
+## Usage
 
-## Performance
+1. Install dependencies:
+   ```bash
+   pip install torch numpy scipy matplotlib
+   ```
+2. Place `DigitsDataTrain.mat` and `DigitsDataTest.mat` in the project root.  
+3. Open and run all cells in `train_matlab.ipynb`.
 
-The model's performance is measured by the Root Mean Squared Error (RMSE) on the validation set. The best validation RMSE achieved is approximately **10.56**.
+## Training Output
+
+- Each epoch prints training and validation RMSE.  
+- When validation RMSE improves, the model weights are saved.  
+- After training, RMSE curves are plotted.
+
+## Model Checkpoint
+
+- **Filename**: `best_model.pt`  
+- **Location**: Project root (`/Users/longheishe/Documents/minst_regression/best_model.pt`)  
+- **Contents**: PyTorch `state_dict` of the `EnhancedCNNRegressor` with the lowest validation RMSE.  
+- **Load checkpoint**:
+  ```python
+  model = EnhancedCNNRegressor().to(device)
+  model.load_state_dict(torch.load("best_model.pt"))
+  model.eval()
+  ```
+
+## Notes
+
+- Runs on MPS (Mac GPU) if available, otherwise CPU.  
+- Uses `scipy.io` to load MATLAB `.mat` files.  
+- Validation split uses a fixed random seed for reproducibility.
+
+## output 
+Best at epoch 23: Val RMSE=5.2134,  Best validation RMSE=5.2134 at epoch 23
